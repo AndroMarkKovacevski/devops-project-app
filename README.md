@@ -48,8 +48,7 @@ UI: otvori `http://localhost:3000`. Detaljno: [`docs/UPUTE-1-DIO.md`](docs/UPUTE
 
 ## Brzi start — 2. dio (produkcija)
 
-- Kubernetes (npr. CentOS 9): [`docs/UPUTE-2-DIO.md`](docs/UPUTE-2-DIO.md)
-- OpenShift (DO180, samo `oc`/`podman`): [`docs/UPUTE-2-DIO-OPENSHIFT.md`](docs/UPUTE-2-DIO-OPENSHIFT.md)
+OpenShift: [`docs/UPUTE-2-DIO-OPENSHIFT.md`](docs/UPUTE-2-DIO-OPENSHIFT.md)
 
 ## Sigurnosni elementi
 
