@@ -1,0 +1,11 @@
+# Namespace u kojem zivi cijela aplikacija.
+# Sve ostalo se deploya u "ticketing" -> lakse ciscenje (kubectl delete ns ticketing)
+# i prirodna granica za NetworkPolicy / RBAC.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ticketing
+  labels:
+    app.kubernetes.io/part-of: ticketing-platform
+    # Oznaka koju koristi default-deny NetworkPolicy (vidi 09-networkpolicy.yaml)
+    name: ticketing

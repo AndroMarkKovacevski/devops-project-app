@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+#
+# API servis (Node.js / Express)
+# Multi-stage build:
+#   base         -> zajednicki sloj (radni dir + package.json za caching)
+#   development  -> SVE ovisnosti (ukljucujuci nodemon) za hot-reload u lokalnom razvoju
+#   prod-deps    -> samo runtime (produkcijske) ovisnosti
+#   production   -> minimalna, non-root slika za produkciju (koristi se u 2. dijelu)
+#
+# Lokalni compose koristi target: development.
+# Produkcijska slika (za skeniranje/registry/Kubernetes) gradi se s --target production.
+
+# ---------- base ----------
+FROM node:20-alpine AS base
+WORKDIR /app
+# Prvo kopiramo samo manifest -> Docker cache se ne rusi pri svakoj promjeni koda.
+COPY package.json ./
+# Ako kasnije generiras lockfile (npm install -> package-lock.json), dodaj i njega:
+# COPY package.json package-lock.json ./
+
+# ---------- development (hot-reload) ----------
+FROM base AS development
+ENV NODE_ENV=development
+# install (ne ci) jer u repozitoriju jos nema package-lock.json
+RUN npm install
+COPY . .
+# node korisnik (uid 1000) vec postoji u sluzbenoj node slici -> ne radimo kao root
+USER node
+EXPOSE 8080
+CMD ["npm", "run", "dev"]
+
+# ---------- prod-deps ----------
+FROM base AS prod-deps
+ENV NODE_ENV=production
+RUN npm install --omit=dev
+
+# ---------- production (minimalna, non-root) ----------
+FROM node:20-alpine AS production
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY src ./src
+USER node
+EXPOSE 8080
+CMD ["npm", "start"]

@@ -1,0 +1,19 @@
+# Tajne i lokalna konfiguracija - NIKAD ne commitati pravi .env
+.env
+*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# OS / editor smece
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logovi
+logs/
+*.log

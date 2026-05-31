@@ -1,0 +1,81 @@
+# =========================================================
+#  API servis. 2 replike -> smislen rolling update + bolja dostupnost.
+#  Slika: zamijeni <REGISTRY>/ticketing-api:1.0.0 svojom (vidi upute).
+# =========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: ticketing-platform
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0      # uvijek barem 2 dostupna tijekom updatea (bez prekida)
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: ticketing-platform
+    spec:
+      serviceAccountName: ticketing-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000       # 'node' korisnik iz sluzbene node slike
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ticketing-api:1.0.0      # <- UREDI (npr. docker.io/<user>/ticketing-api:1.0.0)
+          imagePullPolicy: IfNotPresent   # minikube image load radi bez ponovnog pull-a
+          ports:
+            - containerPort: 8080
+          # Sve env varijable odjednom iz ConfigMapa + Secreta:
+          envFrom:
+            - configMapRef: { name: ticketing-config }
+            - secretRef:    { name: ticketing-secret }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }   # provjerava DB + Redis
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits:   { cpu: "500m", memory: "256Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: ticketing-platform
+spec:
+  selector:
+    app.kubernetes.io/name: api
+  ports:
+    - port: 8080
+      targetPort: 8080

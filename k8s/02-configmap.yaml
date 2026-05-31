@@ -1,0 +1,31 @@
+# =========================================================
+#  ConfigMap = NE-tajna konfiguracija (sve osim lozinki).
+#  Lozinka je odvojena u Secret (03-secret.yaml).
+# =========================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticketing-config
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/part-of: ticketing-platform
+data:
+  POSTGRES_DB: "ticketing"
+  POSTGRES_USER: "ticketing_user"
+  POSTGRES_HOST: "postgres"        # interno ime servisa (DNS unutar namespacea)
+  POSTGRES_PORT: "5432"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  API_PORT: "8080"
+  FRONTEND_PORT: "3000"
+  QUEUE_NAME: "ticket_orders"
+  NODE_ENV: "production"
+
+  # !!! OBAVEZNO UREDITI !!!
+  # Ovo je URL koji BROWSER (ne pod) koristi za API. Mora biti JAVNA adresa
+  # na kojoj je API dostupan kroz Ingress/Route, jer browser radi izvan klastera.
+  # Path-based routing: Ingress salje /api -> api servis, a API interno skida "/api" prefiks.
+  # Primjeri:
+  #   minikube (nip.io): http://ticketing.<MINIKUBE_IP>.nip.io/api
+  #   OpenShift Route:   http://ticketing-frontend-ticketing.apps-crc.testing/api
+  API_BASE_URL: "http://ticketing.local/api"

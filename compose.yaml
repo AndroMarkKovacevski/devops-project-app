@@ -1,0 +1,117 @@
+#  Secure Event Ticketing Platform - LOKALNI razvoj
+#  Pokrece se jednom naredbom:  podman compose up --build / moze se i s docker compose up --build
+#
+#  Servisi:
+#    postgres  - baza (trajni podaci u named volume "pgdata")
+#    redis     - queue/cache
+#    api       - REST API (port 8080)
+#    worker    - pozadinska obrada queuea (bez porta)
+#    frontend  - web UI (port 3000)
+
+name: ticketing-local
+
+services:
+  # ---------------- PostgreSQL ----------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: ticketing-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---------------- Redis ----------------
+  redis:
+    image: redis:7-alpine
+    container_name: ticketing-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------- API ----------------
+  api:
+    build:
+      context: ./api
+      dockerfile: Containerfile
+      target: development        # hot-reload; Za produkciju: target production.
+    container_name: ticketing-api
+    env_file: .env               
+    ports:
+      - "${API_PORT}:8080"
+    volumes:
+      - ./api/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---------------- Worker ----------------
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Containerfile
+      target: development
+    container_name: ticketing-worker
+    env_file: .env
+    volumes:
+      - ./worker/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------- Frontend ----------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Containerfile
+      target: development
+    container_name: ticketing-frontend
+    env_file: .env
+    environment:
+      API_BASE_URL: ${API_BASE_URL}
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+# ---------------- Named volumes ----------------
+volumes:
+  pgdata:

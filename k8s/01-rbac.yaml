@@ -1,0 +1,48 @@
+# =========================================================
+#  RBAC / least-privilege
+#  Aplikacija NE prica s Kubernetes API-jem, pa joj ne treba nikakav
+#  pristup. Najsigurnije = dedicirani ServiceAccount BEZ ikakvih prava
+#  i ISKLJUCEN automatski mount API tokena.
+#
+#  Role + RoleBinding ovdje su namjerno MINIMALNI (samo citanje VLASTITOG
+#  configmapa) - sluze kao demonstracija RBAC uzorka i least-privilege
+#  principa. Mozes ih i obrisati; aplikacija radi i bez njih.
+# =========================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ticketing-sa
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/part-of: ticketing-platform
+# Aplikacija ne treba token za K8s API -> ne montiraj ga (smanjuje napadnu povrsinu).
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ticketing-config-reader
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/part-of: ticketing-platform
+rules:
+  # Najuze moguce pravo: samo get/list configmapa u OVOM namespaceu.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ticketing-config-reader-binding
+  namespace: ticketing
+  labels:
+    app.kubernetes.io/part-of: ticketing-platform
+subjects:
+  - kind: ServiceAccount
+    name: ticketing-sa
+    namespace: ticketing
+roleRef:
+  kind: Role
+  name: ticketing-config-reader
+  apiGroup: rbac.authorization.k8s.io
