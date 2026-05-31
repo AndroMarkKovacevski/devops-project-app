@@ -25,7 +25,6 @@ Tok kupnje: browser → frontend → api → (red u Redisu) → worker → upis 
 ├── compose.yaml             # 1. dio — lokalni razvoj (sve jednom naredbom)
 ├── .env.example             # primjer konfiguracije (kopiraj u .env)
 ├── k8s/                     # 2. dio — Kubernetes/OpenShift manifesti
-├── .github/workflows/ci.yaml# (bonus) CI: build + Trivy + push
 └── docs/                    # upute, runbook, sigurnosno izvješće, izvještaj
 ```
 
@@ -59,7 +58,7 @@ Multi-stage build i non-root runtime, odvojeni Secret/ConfigMap (bez tajni u kod
 ## Dokumentacija
 
 - [`docs/UPUTE-1-DIO.md`](docs/UPUTE-1-DIO.md) — lokalno okruženje
-- [`docs/UPUTE-2-DIO.md`](docs/UPUTE-2-DIO.md) / [`docs/UPUTE-2-DIO-OPENSHIFT.md`](docs/UPUTE-2-DIO-OPENSHIFT.md) — produkcija
+- [`docs/UPUTE-2-DIO-OPENSHIFT.md`](docs/UPUTE-2-DIO-OPENSHIFT.md) — produkcija
 - [`docs/RUNBOOK.md`](docs/RUNBOOK.md) — incidenti i troubleshooting
 - [`docs/security/image-scan-report.md`](docs/security/image-scan-report.md) — sigurnosno izvješće
-- [`docs/Izvjestaj-PRIMJER.docx`](docs/Izvjestaj-PRIMJER.docx) — predložak završnog izvještaja
+
