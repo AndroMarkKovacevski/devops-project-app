@@ -6,7 +6,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:        
+  workflow_dispatch:        # omogucuje rucno pokretanje iz GitHub UI (Actions -> Run workflow)
 
 permissions:
   contents: read
@@ -31,18 +31,18 @@ jobs:
             -f ${{ matrix.service }}/Containerfile \
             ${{ matrix.service }}
 
-      # --- sigurnosna provjera (Trivy) kao quality gate u CI toku ---
+      # ---sigurnosna provjera (Trivy) kao quality gate u CI toku ---
       - name: Trivy skeniranje (${{ matrix.service }})
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ticketing-${{ matrix.service }}:${{ github.sha }}
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           output: trivy-${{ matrix.service }}.txt
-          exit-code: "0"        # samo izvjestava 
+          exit-code: "0"        # ne obara pipeline; samo izvjestava o ranjivostima
 
-      # --- dokaz skeniranja ---
+      # --- Spremi sigurnosni izvjestaj kao artefakt (dokaz skeniranja) ---
       - name: Upload Trivy izvjestaja
         uses: actions/upload-artifact@v4
         with:
