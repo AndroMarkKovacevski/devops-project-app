@@ -28,15 +28,9 @@ spec:
         app.kubernetes.io/part-of: ticketing-platform
     spec:
       serviceAccountName: ticketing-sa
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: frontend
-          image: ticketing-frontend:1.0.0   # <- UREDI
+          image: image-registry.openshift-image-registry.svc:5000/ticketing/ticketing-frontend:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
