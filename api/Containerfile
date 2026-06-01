@@ -8,7 +8,7 @@
 #   production   -> minimalna, non-root slika za produkciju (koristi se u 2. dijelu)
 
 # Lokalni compose koristi target: development.
-# Produkcijska slika (za skeniranje/registry/Kubernetes) gradi se s --target production.
+
 
 # ---------- base ----------
 FROM node:20-alpine AS base

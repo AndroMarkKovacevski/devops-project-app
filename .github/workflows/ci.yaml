@@ -1,0 +1,51 @@
+
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:        
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false        # ako jedan servis padne, ostali se svejedno izvrse
+      matrix:
+        service: [ api, worker, frontend ]
+    steps:
+      - name: Checkout koda
+        uses: actions/checkout@v4
+
+      # --- automatizirani build produkcijske slike ---
+      - name: Build slike (${{ matrix.service }})
+        run: |
+          docker build \
+            --target production \
+            -t ticketing-${{ matrix.service }}:${{ github.sha }} \
+            -f ${{ matrix.service }}/Containerfile \
+            ${{ matrix.service }}
+
+      # --- sigurnosna provjera (Trivy) kao quality gate u CI toku ---
+      - name: Trivy skeniranje (${{ matrix.service }})
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ticketing-${{ matrix.service }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          output: trivy-${{ matrix.service }}.txt
+          exit-code: "0"        # samo izvjestava 
+
+      # --- dokaz skeniranja ---
+      - name: Upload Trivy izvjestaja
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-${{ matrix.service }}
+          path: trivy-${{ matrix.service }}.txt
+          if-no-files-found: warn
