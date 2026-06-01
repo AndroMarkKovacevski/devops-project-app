@@ -29,15 +29,9 @@ spec:
         app.kubernetes.io/part-of: ticketing-platform
     spec:
       serviceAccountName: ticketing-sa
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000       # 'node' korisnik iz sluzbene node slike
-        runAsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: api
-          image: ticketing-api:1.0.0      # <- UREDI (npr. docker.io/<user>/ticketing-api:1.0.0)
+          image: image-registry.openshift-image-registry.svc:5000/ticketing/ticketing-api:1.0.0
           imagePullPolicy: IfNotPresent   # minikube image load radi bez ponovnog pull-a
           ports:
             - containerPort: 8080
