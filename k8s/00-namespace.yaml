@@ -7,5 +7,4 @@ metadata:
   name: ticketing
   labels:
     app.kubernetes.io/part-of: ticketing-platform
-    # Oznaka koju koristi default-deny NetworkPolicy (vidi 09-networkpolicy.yaml)
     name: ticketing

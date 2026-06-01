@@ -21,11 +21,6 @@ data:
   QUEUE_NAME: "ticket_orders"
   NODE_ENV: "production"
 
-  # !!! OBAVEZNO UREDITI !!!
-  # Ovo je URL koji BROWSER (ne pod) koristi za API. Mora biti JAVNA adresa
-  # na kojoj je API dostupan kroz Ingress/Route, jer browser radi izvan klastera.
-  # Path-based routing: Ingress salje /api -> api servis, a API interno skida "/api" prefiks.
-  # Primjeri:
-  #   minikube (nip.io): http://ticketing.<MINIKUBE_IP>.nip.io/api
-  #   OpenShift Route:   http://ticketing-frontend-ticketing.apps-crc.testing/api
+ 
+#ovo je samo primjer, mijenjat ces kad dobijes u 6. koraku nakon naredbe oc -n ticketing get route api. nakon tog stavi taj link ovdje 
   API_BASE_URL: "http://ticketing.local/api"

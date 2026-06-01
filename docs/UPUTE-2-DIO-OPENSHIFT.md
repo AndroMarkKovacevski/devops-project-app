@@ -23,14 +23,13 @@ oc new-project ticketing
 
 ## 2. Build slika
 
-OpenShift ne povlači lokalne `podman` slike automatski — sliku treba dobiti u klaster. Imaš dvije metode; odaberi jednu.
+OpenShift ne povlači lokalne `podman` slike automatski — sliku treba dobiti u klaster
 
-### Metoda A — build unutar klastera (`oc new-build`)  ✅ preporučeno
-Ne treba ti vanjski registry ni izlaganje internog. OpenShift sam sagradi i spremi sliku u interni registry kao ImageStream.
+### build unutar klastera (`oc new-build`) 
 
 ```bash
 for s in api worker frontend; do
-  # 1) kreiraj build (docker strategija = gradi po Containerfile-u)
+  # 1) kreiraj build (gradi po Containerfile-u)
   oc new-build --name=ticketing-$s --binary --strategy=docker -n ticketing
 
   # 2) reci buildu da je datoteka "Containerfile" (a ne "Dockerfile")
@@ -56,26 +55,6 @@ sed -i "s#image: ticketing-worker:1.0.0#image: $REG/ticketing-worker:1.0.0#"    
 sed -i "s#image: ticketing-frontend:1.0.0#image: $REG/ticketing-frontend:1.0.0#" k8s/08-frontend.yaml
 ```
 
-### Metoda B — `podman build` + push u interni registry
-Ako želiš graditi lokalno podmanom. Treba izložen interni registry (zahtijeva cluster-admin; na CRC `kubeadmin` ga ima).
-
-```bash
-# (jednom) izloži interni registry rutom:
-oc patch configs.imageregistry.operator.openshift.io/cluster --type=merge \
-  -p '{"spec":{"defaultRoute":true}}'
-REGHOST=$(oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}')
-
-# login podmanom (token tvog korisnika):
-podman login -u $(oc whoami) -p $(oc whoami -t) $REGHOST --tls-verify=false
-
-# build PRODUKCIJSKE faze, tag i push za svaki servis:
-for s in api worker frontend; do
-  podman build --target production -t $REGHOST/ticketing/ticketing-$s:1.0.0 ./$s
-  podman push --tls-verify=false $REGHOST/ticketing/ticketing-$s:1.0.0
-done
-```
-Zatim isti `sed` kao u Metodi A (slike su na istoj internoj putanji).
-
 
 
 ## 3. SCC dozvola (da slike rade pod OpenShiftom)
@@ -89,9 +68,6 @@ oc apply -f k8s/01-rbac.yaml
 # Dopusti anyuid (treba cluster-admin; kubeadmin na CRC ga ima):
 oc adm policy add-scc-to-user anyuid -z ticketing-sa -n ticketing
 ```
-
-> **Što ovo znači / sigurnosni kompromis:** `anyuid` dopušta kontejneru da radi pod UID-om koji slika traži (npr. postgres kao 999, node kao 1000). To je standardna lab-praksa, ali je manje restriktivno od "arbitrary UID". Za stroži (sigurniji) pristup vidi poglavlje 10 — ondje ne koristiš `anyuid`, nego prilagodiš slike/securityContext. Na obrani spomeni da si svjesno odabrao jednostavniji put i koji je trade-off.
-
 
 
 ## 4. Konfiguracija + tajna
@@ -147,11 +123,6 @@ oc -n ticketing patch configmap ticketing-config --type=merge \
 oc -n ticketing rollout restart deploy/frontend
 ```
 
-> Ovdje su frontend i api na **različitim** hostovima (svaki svoja ruta), pa `API_BASE_URL` pokazuje ravno na API host (bez `/api`). API je CORS-otvoren (`Access-Control-Allow-Origin: *`) pa cross-host poziv radi.
->
-> Ako želiš fiksne hostove / path routing na istom hostu, umjesto `oc expose` koristi `k8s/route-openshift.yaml` (uredi `host:` na svoju apps domenu, koja se dobije s `oc get ingresses.config/cluster -o jsonpath='{.spec.domain}'`).
-
-
 
 ## 7. Validacija
 
@@ -185,8 +156,6 @@ podman build --target production -t ticketing-api:1.0.0 ./api
 # Skeniraj i spremi ispis u repo:
 trivy image ticketing-api:1.0.0 | tee docs/security/trivy-api.txt
 ```
-Brojeve i mjere prepiši u `docs/security/image-scan-report.md` (predložak je u repou). Ako nemaš Trivy instaliran, on je jedan binarni alat — upute na `https://trivy.dev/latest/`. Nije nužan da deploy radi, nego da imaš traženi artefakt.
-
 
 
 ## 9. Rolling update i rollback
@@ -208,30 +177,11 @@ Jer api ima `maxUnavailable: 0`, tijekom updatea nema prekida usluge.
 
 
 
-## 10. (Opcionalno) Stroži pristup bez `anyuid`
-
-Ako želiš bodove za pravi least-privilege i ne koristiti `anyuid`:
-
-- **Node servisi** (api/worker/frontend): ostavi `runAsNonRoot: true`, ali makni fiksni UID i daj pisivi HOME:
-  ```bash
-  for d in api worker frontend; do
-    oc -n ticketing patch deploy/$d --type=json \
-      -p='[{"op":"remove","path":"/spec/template/spec/securityContext/runAsUser"},
-           {"op":"remove","path":"/spec/template/spec/securityContext/runAsGroup"}]'
-    oc -n ticketing set env deploy/$d HOME=/tmp
-  done
-  ```
-- **Postgres**: pod restricted SCC službena `postgres` slika zna pasti. Koristi OpenShift-kompatibilnu sliku (npr. iz kataloga `oc new-app postgresql-persistent ...`) — ali pazi, ona koristi `POSTGRESQL_*` varijable umjesto `POSTGRES_*`, pa bi trebalo uskladiti ConfigMap. Za lab je `anyuid` (poglavlje 3) jednostavniji i prihvatljiv.
-
-
-
-## 11. Čišćenje
+## 10. Čišćenje
 
 ```bash
 oc delete project ticketing     # briše SVE u projektu (DESTRUKTIVNO)
 ```
-
-
 
 ## Brzi referentni popis (oc)
 
