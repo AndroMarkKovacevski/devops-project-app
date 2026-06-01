@@ -1,9 +1,7 @@
-# =========================================================
 #  PostgreSQL: init skripta (ConfigMap) + trajni disk (PVC) + Deployment + Service
-# =========================================================
-
 # --- init.sql kao ConfigMap (montira se u /docker-entrypoint-initdb.d) ---
-# Izvrsava se SAMO pri prvoj inicijalizaciji prazne baze. Kreira ticket_orders.
+# Izvrsava se samo pri prvoj inicijalizaciji prazne baze. Kreira ticket_orders.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -34,11 +32,10 @@ metadata:
     app.kubernetes.io/part-of: ticketing-platform
 spec:
   accessModes:
-    - ReadWriteOnce        # jedan node pise -> dovoljno za jednu DB instancu
+    - ReadWriteOnce        
   resources:
     requests:
       storage: 1Gi
-  # storageClassName: standard   # otkomentiraj/promijeni ako klaster trazi eksplicitnu klasu
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,7 +49,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate          # RWO disk: stari pod mora otpustiti volume prije novog
+    type: Recreate          
   selector:
     matchLabels:
       app.kubernetes.io/name: postgres
@@ -65,7 +62,7 @@ spec:
     spec:
       serviceAccountName: ticketing-sa
       securityContext:
-        fsGroup: 999          # postgres uid/gid u sluzbenoj slici -> moze pisati na PVC
+        fsGroup: 999          # postgres user u containeru ima uid 999 -> dozvole na PV-u
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -81,7 +78,6 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef: { name: ticketing-secret, key: POSTGRES_PASSWORD }
-            # Podaci u poddirektorij -> izbjegava problem s lost+found na nekim diskovima
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
@@ -127,4 +123,3 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
-  # ClusterIP (default) -> dostupno samo unutar klastera. Baza se NE izlaze van.

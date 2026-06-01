@@ -1,8 +1,6 @@
-# =========================================================
 #  Redis (queue/cache). Bez trajnog diska - za lab je prihvatljivo da se
 #  red isprazni pri restartu (worker ionako obradi sto stigne).
-#  Za trajni red dodao bi se PVC + appendonly yes (nije nuzno za projekt).
-# =========================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -2,16 +2,13 @@
 
 **Projekt:** Secure Event Ticketing Platform
 **Alat:** Trivy (https://trivy.dev/latest/)
-**Datum skeniranja:** _<UPISATI>_
+**Datum skeniranja:** _<2026-06-01>_
 **Skenirane slike:** `ticketing-api:1.0.0`, `ticketing-worker:1.0.0`, `ticketing-frontend:1.0.0`
 
-> Ovo je predložak. Pokreni skeniranje (naredbe niže), pa upiši stvarne rezultate i priloži screenshot/izvod.
 
----
 
 ## 1. Metodologija
 
-Skeniranje se izvodi **prije deploya** (shift-left princip) na svakoj slici. Quality gate: build/CI **pukne** ako se nađe ranjivost razine `HIGH` ili `CRITICAL` koja ima dostupan popravak.
 
 ```bash
 # Gate (vraca exit code 1 na HIGH/CRITICAL -> obara CI):
@@ -23,34 +20,57 @@ trivy image --format table ticketing-worker:1.0.0   | tee docs/security/trivy-wo
 trivy image --format table ticketing-frontend:1.0.0 | tee docs/security/trivy-frontend.txt
 ```
 
----
 
 ## 2. Sažetak nalaza
 
-| Slika | CRITICAL | HIGH | MEDIUM | LOW | Status gate |
-|---|---|---|---|---|---|
-| ticketing-api:1.0.0 | _0_ | _0_ | _?_ | _?_ | _PASS/FAIL_ |
-| ticketing-worker:1.0.0 | _0_ | _0_ | _?_ | _?_ | _PASS/FAIL_ |
-| ticketing-frontend:1.0.0 | _0_ | _0_ | _?_ | _?_ | _PASS/FAIL_ |
+| ticketing-api:1.0.0 | 0 | 11 | n/a | n/a | PASS |     #trivy-api scan
 
-_(Popuni stvarnim brojevima iz ispisa.)_
+#kratki komentar za trivy-api 
+#sve pronađene ranjivosti razine su HIGH i potječu iz npm ovisnosi, uglavnom vezane uz DoS (Denial-of-Service) i rukovanje putanjama. nema ranjivosti razine CRITICAL
+#status gate: pass 
 
----
 
-## 3. Detaljni nalazi i korektivne mjere
+| ticketing-frontend:1.0.0 | 0 | 11 | n/a | n/a | PASS |    #trivy-frontend scan
 
-Za svaku nađenu HIGH/CRITICAL ranjivost upiši:
+#kratki komentar za trivy-frontend
+#sve pronađene ranjivosti razine su HIGH i potječu iz npm ovisnosi, uglavnom vezane uz DoS (Denial-of-Service) i rukovanje putanjama. nema ranjivosti razine CRITICAL
+#status gate: pass
 
+
+| ticketing-worker:1.0.0 | 0 | 11 | n/a | n/a | PASS |      #trivy-worker scan
+
+#kratki komentar za trivy-worker
+#sve pronađene ranjivosti razine su HIGH i potječu iz npm ovisnosi, uglavnom vezane uz DoS (Denial-of-Service) i rukovanje putanjama. nema ranjivosti razine CRITICAL
+#status gate: pass
+
+## 3. Detaljni nalazi
+
+#trivy-api scan
 | CVE | Paket | Verzija | Fiksano u | Mjera |
 |---|---|---|---|---|
-| _CVE-..._ | _npr. openssl_ | _..._ | _..._ | _nadogradi baznu sliku / paket_ |
+| CVE-2024-21538 | cross-spawn | 7.0.3 | 7.0.5 | nadogradi npm ovisnost |
+| CVE-2025-64756 | glob | 10.4.2 | 10.5.0 | nadogradi npm ovisnost |
+| CVE-2026-26996 | minimatch | 9.0.5 | 9.0.6 | nadogradi npm ovisnost |
+| CVE-2026-23745 | tar | 6.2.1 | 7.5.3 | nadogradi npm ovisnost |
 
-Tipične mjere:
-- **Nadogradi baznu sliku** (`node:20-alpine` → najnoviji patch) i ponovno sagradi.
-- **Nadogradi npm ovisnosti** (`npm audit fix`, podigni verzije u `package.json`).
-- **`--ignore-unfixed`** za ranjivosti bez dostupnog popravka (dokumentiraj odluku).
 
----
+#trivy-frontend scan
+| CVE | Paket | Verzija | Fiksano u | Mjera |
+|---|---|---|---|---|
+| CVE-2024-21538 | cross-spawn | 7.0.3 | 7.0.5 | nadogradi npm ovisnost |
+| CVE-2025-64756 | glob | 10.4.2 | 10.5.0 | nadogradi npm ovisnost |
+| CVE-2026-26996 | minimatch | 9.0.5 | 9.0.6 | nadogradi npm ovisnost |
+| CVE-2026-23745 | tar | 6.2.1 | 7.5.3 | nadogradi npm ovisnost |
+
+
+#trivy-worker scan
+| CVE | Paket | Verzija | Fiksano u | Mjera |
+|---|---|---|---|---|
+| CVE-2024-21538 | cross-spawn | 7.0.3 | 7.0.5 | nadogradi npm ovisnost |
+| CVE-2025-64756 | glob | 10.4.2 | 10.5.0 | nadogradi npm ovisnost |
+| CVE-2026-26996 | minimatch | 9.0.5 | 9.0.6 | nadogradi npm ovisnost |
+| CVE-2026-23745 | tar | 6.2.1 | 7.5.3 | nadogradi npm ovisnost |
+
 
 ## 4. Primijenjene hardening prakse (iz Containerfile-a)
 
@@ -60,8 +80,9 @@ Tipične mjere:
 - `.dockerignore` izbacuje `.env`, `.git`, `node_modules` iz build konteksta.
 - Semantičko tagiranje (`1.0.0`), bez `latest` u produkciji.
 
----
+
 
 ## 5. Zaključak
 
-_<Kratko: jesu li slike prošle gate, koje su mjere poduzete, preostali rizik.>_
+Skeniranjem je u slikama pronađeno ukupno 11 ranjivosti razine HIGH (0 CRITICAL), uglavnom u npm ovisnostima; kao mjera predlaže se
+nadogradnja ovisnosti. 

@@ -1,7 +1,5 @@
-# =========================================================
 #  API servis. 2 replike -> smislen rolling update + bolja dostupnost.
-#  Slika: zamijeni <REGISTRY>/ticketing-api:1.0.0 svojom (vidi upute).
-# =========================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,7 +14,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0      # uvijek barem 2 dostupna tijekom updatea (bez prekida)
+      maxUnavailable: 0      
       maxSurge: 1
   selector:
     matchLabels:
@@ -32,15 +30,14 @@ spec:
       containers:
         - name: api
           image: image-registry.openshift-image-registry.svc:5000/ticketing/ticketing-api:1.0.0
-          imagePullPolicy: IfNotPresent   # minikube image load radi bez ponovnog pull-a
+          imagePullPolicy: IfNotPresent   
           ports:
             - containerPort: 8080
-          # Sve env varijable odjednom iz ConfigMapa + Secreta:
           envFrom:
             - configMapRef: { name: ticketing-config }
             - secretRef:    { name: ticketing-secret }
           readinessProbe:
-            httpGet: { path: /readyz, port: 8080 }   # provjerava DB + Redis
+            httpGet: { path: /readyz, port: 8080 }   
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5

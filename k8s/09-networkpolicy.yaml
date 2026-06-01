@@ -1,13 +1,4 @@
-# =========================================================
 #  NetworkPolicy - segmentacija prometa (zero-trust unutar namespacea)
-#  Strategija: prvo SVE zabrani (default-deny ingress), pa otvori tocno
-#  ono sto treba. Najvazniji cilj: bazi i redisu smiju SAMO api i worker.
-#
-#  NAPOMENA: NetworkPolicy radi samo ako CNI plugin to podrzava
-#  (Calico, Cilium, Weave...). minikube: pokreni s
-#     minikube start --cni=calico
-#  Inace se politike ignoriraju (sve prolazi).
-# =========================================================
 
 # 1) Default deny svega dolaznog u namespaceu
 apiVersion: networking.k8s.io/v1
@@ -60,8 +51,7 @@ spec:
           port: 6379
 ---
 # 4) API prima od frontend podova + izvana (Ingress controller) na 8080.
-#    'from' izostavljen za vanjski pristup -> dozvoljeno sa svih izvora NA PORTU 8080.
-#    (Opcionalno stroze: ogranici na namespace ingress kontrolera.)
+
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

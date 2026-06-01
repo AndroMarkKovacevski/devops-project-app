@@ -1,10 +1,5 @@
-# =========================================================
 #  Worker - pozadinski potrosac reda. NEMA Service (ne slusa na portu)
-#  i NEMA HTTP probe (nema endpointa).
-#  Otpornost: ako proces padne (fatalna greska -> process.exit(1)),
-#  Kubernetes ga automatski restarta (restartPolicy Always je default).
-#  Opcionalno: heartbeat-file + exec livenessProbe (zahtijeva malu izmjenu koda).
-# =========================================================
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:

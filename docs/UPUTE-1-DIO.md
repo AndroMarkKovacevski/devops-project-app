@@ -3,8 +3,6 @@
 Projekt: Secure Event Ticketing Platform
 Cilj 1. dijela: pokrenuti cijelu aplikaciju (5 servisa) lokalno, jednom naredbom, s hot-reloadom, trajnom bazom i odvojenim tajnama.
 
-> Ova uputa pretpostavlja da nisi duboko upoznat s pojmovima. Sve je objašnjeno korak po korak. Tehnički pojmovi i kod su namjerno ostavljeni na engleskom jer se tako i koriste u praksi.
-
 ---
 
 ## 1. Što gradimo (pregled u 1 minuti)
@@ -34,29 +32,46 @@ Konačan raspored:
 
 
 devops-project-app/
-    compose.yaml              ← MOJE-dodano  (orkestracija svih servisa)
-    .env.example              ← DOPUNJENO (dodan API_BASE_URL)
-    .env                      ← kreirano lokalno, NE commitaš
-    .gitignore                ← MOJE-dodano  (da .env i node_modules ne odu u git)
+    compose.yaml              MOJE-dodano  (orkestracija svih servisa)
+    .env.example              DOPUNJENO (dodan API_BASE_URL)
+    .env                      kreirano lokalno, NE commitaš
+    .gitignore                MOJE-dodano  (da .env i node_modules ne odu u git)
     docs/
-      UPUTE-1-DIO.md         ← MOJE-dodano  (ova uputa)
+      security/
+        image-scan-report.md  izvještaj skeniranja slika
+        trivy-api.txt         trivy zapisi od api
+        trivy-frontend.txt    trivy zapisi od frontend
+        trivy-worker.txt      trivy zapisi od worker
+      UPUTE-1-DIO.md          MOJE-dodano  (ova uputa)
+      UPUTE-2-dio.md          uputa za 2. dio projekta
     api/
-      Containerfile         ← MOJE-dodano
-      .dockerignore         ← MOJE-dodano
+      Containerfile           MOJE-dodano
+      .dockerignore           MOJE-dodano
       package.json          
        src/server.js         
-   worker/
-      Containerfile         ← MOJE-dodano
-      .dockerignore         ← MOJE-dodano
+    worker/
+      Containerfile           MOJE-dodano
+      .dockerignore           MOJE-dodano
       package.json          
       src/worker.js         
-   frontend/
-      Containerfile         ← MOJE-dodano
-      .dockerignore         ← MOJE-dodano
+    frontend/
+      Containerfile           MOJE-dodano
+      .dockerignore           MOJE-dodano
       package.json          
       src/...               
-   infra/
-      postgres/init.sql     
+    infra/
+      postgres/init.sql
+    k8s
+      00-namespace.yaml
+      01-rbac.yamk
+      02-configmap.yaml
+      03-secret.yaml
+      04-postgres.yaml
+      05-redis.yaml
+      06-api.yaml
+      07-worker.yaml
+      08-frontend.yaml
+      09-networkpolicy.yaml  
 
 
 ---
@@ -73,9 +88,9 @@ Containerfile je recept za izgradnju kontejnerske slike. Naš je multi-stage —
 - production — uzima samo te ovisnosti + izvorni kod → minimalna slika, pokreće se kao non-root korisnik (USER node). Ovo je slika za 2. dio (registry, skeniranje, Kubernetes).
 
 
-- *multi-stage build* ✔ — odvojene faze za dev i prod.
-- *minimalna runtime slika* ✔ — production faza nosi samo runtime ovisnosti, na node:20-alpine (mala Alpine baza).
-- *non-root korisnik* ✔ — USER node (uid 1000), ne radi kao root.
+- *multi-stage build* — odvojene faze za dev i prod.
+- *minimalna runtime slika* — production faza nosi samo runtime ovisnosti, na node:20-alpine (mala Alpine baza).
+- *non-root korisnik* — USER node (uid 1000), ne radi kao root.
 
 worker/Containerfile nema EXPOSE jer worker ne sluša ni na jednom portu (pozadinski proces).
 
@@ -100,7 +115,7 @@ Glavna datoteka koja opisuje svih 5 servisa i kako se povezuju. Ključni dijelov
 ### 3.4 .env.example i .env
 
 - .env.example je predložak koji se commita u git (bez pravih tajni).
-- Dodan API_BASE_URL=http://localhost:8080 jer browser API zove preko host porta.
+- Dodan API_BASE_URL=http://api-ticketing.apps.ocp4.example.com jer browser API zove preko host porta.
 
 ### 3.5 .gitignore
 
@@ -109,8 +124,7 @@ Sprječava da u git odu: .env (secrets), node_modules/, logovi, OS smeće
 
 ## 4. Pokretanje (startup) — jedna naredba
 
-Iz korijena projekta:
-
+Iz korijena projekta: 
 
 # kreiranje slike i pokretanje cijelog stacka
 podman compose up --build
@@ -141,11 +155,9 @@ curl -X POST http://localhost:8080/tickets/purchase \
   -H Content-Type: application/json \
   -d '{eventId:evt-1001,customerEmail:student@example.com,quantity:2}'
 
-# 5) Pričekaj ~1 sekundu (worker obrađuje) pa provjeri obrađene narudžbe
+# 5) Provjera obrađene narudžbe
 curl http://localhost:8080/tickets/orders
 
-
-Korak 5 treba pokazati narudžbu sa status: processed — to dokazuje da je cijeli lanac (api → redis → worker → postgres) prošao.
 
 UI test: otvori http://localhost:3000, odaberi event, klikni *Purchase*. U Output polju dobiješ orderId.
 
@@ -162,42 +174,18 @@ podman compose stop
 podman compose start
 
 DESTRUKTIVNO:
-bash
-podman compose down -v
 
+```bash
+podman compose down -v
+```
 -v briše i named volume pgdata → gube se sve narudžbe u bazi. 
 Blast radius: samo lokalni razvojni podaci (nema produkcije), ali nije povratno. 
 -v samo kad se namjerno čisti baza. Novu tablicu init.sql kreira pri sljedećem "up"
 
 ---
 
-## 7. Kako radi hot-reload (i test)
 
-Dev faza pokreće nodemon, koji restarta servis na svaku promjenu koda. 
-Bind mount ./api/src:/app/src znači da kontejner vidi datoteke s diska u stvarnom vremenu.
-
-Test:
-1. Pokreni stack (podman compose up).
-2. Otvori api/src/server.js, u /healthz promijeni service: api u service: api-v2, spremi.
-3. U logovima api servisa vidjet ćeš da se nodemon restarta.
-4. curl http://localhost:8080/healthz → sad vraća service:api-v2.
-
-> Statički HTML (frontend/src/public/index.html) se vidi odmah nakon refresha browsera — ne treba restart.
-
-
-
-## 8. Checklist za predaju 1. dijela
-
-Projekt traži (poglavlje 4 dokumenta) ove isporuke — sve su pokrivene:
-- Containerfile/podmanfile za sve servise (api, worker, frontend; baza i redis koriste službene slike)
-- Compose datoteka (compose.yaml) — pokreće cijeli stack jednom naredbom
-- .env primjer za env varijable i lokalne tajne (.env.example)
-- Trajnost baze kroz volume (pgdata)
-- Hot-reload (nodemon + bind mount) za sva 3 Node servisa
-- Upute za developere (README/docs) — ovaj dokument
-- Validacija — health endpoint + osnovni workflow (poglavlje 6)
-
-## 9. Troubleshooting (česti problemi)
+## 7. Troubleshooting (česti problemi)
 
 Simptom Uzrok Rješenje 
 ---------

@@ -59,7 +59,6 @@ sed -i "s#image: ticketing-frontend:1.0.0#image: $REG/ticketing-frontend:1.0.0#"
 
 ## 3. SCC dozvola (da slike rade pod OpenShiftom)
 
-OpenShift po defaultu pokreće kontejnere s nasumičnim UID-om (restricted SCC). Službene `postgres`/`redis`/`node` slike to ne vole. Najjednostavnije rješenje za lab: dopusti `anyuid` našem ServiceAccountu.
 
 ```bash
 # Prvo kreiraj ServiceAccount (iz RBAC manifesta):
@@ -97,7 +96,6 @@ oc -n ticketing get pods -w
 ```
 
 
-
 ## 6. Mreža + vanjski pristup (Route)
 
 ```bash
@@ -112,7 +110,7 @@ oc -n ticketing expose service api
 oc -n ticketing get route
 ```
 
-Pretpostavimo da `oc get route` pokaže npr. `api-ticketing.apps-crc.testing`. Tada postavi `API_BASE_URL` na host API rute:
+Tada postava `API_BASE_URL` na host API rute:
 
 ```bash
 API_HOST=$(oc -n ticketing get route api -o jsonpath='{.spec.host}')
@@ -147,7 +145,6 @@ echo "UI: http://$FE_HOST"             # otvori u browseru
 
 ## 8. Trivy — sigurnosni artefakt (ODVOJENO od deploya)
 
-Ovo nije dio deploya i ne miješa se s `oc`. Skeniraš slike podmanom-sagrađene ili one iz registryja, jednom, i spremiš ispis. Projekt to traži (str. 9 "Sigurnosno izvješće", ishod I2 "Skeniranje ranjivosti").
 
 ```bash
 # Build lokalno podmanom samo za skeniranje (ako nisi išao Metodom B):
